@@ -1,0 +1,20 @@
+{
+	"name": "lightshark-lighting-console",
+	"version": "1.0.0",
+	"api_version": "1.0.0",
+	"keywords": [
+		"lightshark",
+		"lighting",
+		"console"
+	],
+	"manufacturer": "LightShark",
+	"product": "Lighing Console",
+	"shortname": "lightshark",
+	"description": "Controls the LightShark family of consoles using OSC",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"author": "David Stevens <teamjtf4@gmail.com>",
+	"license": "MIT"
+}
