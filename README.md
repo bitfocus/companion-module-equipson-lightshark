@@ -1,2 +1,2 @@
-# companion-module-lightshark-lighting-console
+# companion-module-equipson-lightshark
 See HELP.md and LICENSE
