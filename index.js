@@ -10,12 +10,6 @@ function instance(system, id, config) {
 
 	self.actions(); // export actions
 
-	self.addUpgradeScript(function () {
-		if (self.config.host !== undefined) {
-			self.config.old_host = self.config.host;
-		}
-	});
-
 	return self;
 }
 
