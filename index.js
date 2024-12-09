@@ -71,7 +71,7 @@ instance.prototype.actions = function(system) {
 			options: []
 		},
 		'edit': {
-			label: 'Update',
+			label: 'Edit',
 			options: []
 		},
 		'update': {
@@ -382,7 +382,7 @@ instance.prototype.actions = function(system) {
 			]
 		},
 		'executorToggleMode': {
-			label: 'Executor Push Mode',
+			label: 'Executor Toggle Mode',
 			options: [
 				{
 					type: 'number',
