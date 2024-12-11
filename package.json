@@ -1,20 +1,23 @@
 {
 	"name": "equipson-lightshark",
-	"version": "1.0.2",
-	"api_version": "1.0.0",
-	"keywords": [
-		"lightshark",
-		"lighting",
-		"console"
-	],
-	"manufacturer": "LightShark",
-	"product": "Lighing Console",
-	"shortname": "lightshark",
-	"description": "Controls the LightShark family of consoles using OSC",
+	"version": "2.0.0",
 	"main": "index.js",
+	"type": "module",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1"
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"format": "prettier -w ."
 	},
-	"author": "David Stevens <teamjtf4@gmail.com>",
-	"license": "MIT"
+	"license": "MIT",
+	"dependencies": {
+		"@companion-module/base": "~1.11.2",
+		"node-osc": "^9.1.0"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/bitfocus/companion-module-equipson-lightshark.git"
+	},
+	"devDependencies": {
+		"@companion-module/tools": "^2.1.0"
+	},
+	"prettier": "@companion-module/tools/.prettierrc.json"
 }

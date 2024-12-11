@@ -1,702 +1,206 @@
-var instance_skel = require('../../instance_skel');
-var debug;
-var log;
+import { InstanceBase, runEntrypoint, InstanceStatus, combineRgb } from '@companion-module/base'
+import { upgradeScripts } from './upgrade.js'
+import { setupActions } from './actions.js'
+import { setupFeedbacks } from './feedbacks.js'
+import { configFields } from './config.js'
 
-function instance(system, id, config) {
-	var self = this;
+import { Client, Server } from 'node-osc'
+import { variables } from './variables.js'
 
-	// super-constructor
-	instance_skel.apply(this, arguments);
+class LightsharkInstance extends InstanceBase {
+	isInitialized = false
+	async init(config) {
+		this.config = config
 
-	self.actions(); // export actions
+		this.updateStatus(InstanceStatus.Connecting)
+		this.initActions()
+		this.initFeedbacks()
+		this.setVariableDefinitions(variables)
 
-	return self;
-}
-
-instance.prototype.updateConfig = function(config) {
-	var self = this;
-
-	self.config = config;
-};
-instance.prototype.init = function() {
-	var self = this;
-
-	self.status(self.STATE_OK);
-
-	debug = self.debug;
-	log = self.log;
-};
-
-// Return config fields for web config
-instance.prototype.config_fields = function () {
-	var self = this;
-	return [
-		{
-			type: 'textinput',
-			id: 'host',
-			label: 'Console IP',
-			width: 8,
-			regex: self.REGEX_IP
-		},
-		{
-			type: 'textinput',
-			id: 'port',
-			label: 'OSC Port',
-			width: 4,
-			default: 8000,
-			regex: self.REGEX_PORT
-		}
-	]
-};
-
-// When module gets deleted
-instance.prototype.destroy = function() {
-	var self = this;
-	debug('destroy');
-};
-
-instance.prototype.actions = function(system) {
-	var self = this;
-	self.system.emit('instance_actions', self.id, {
-		'pageup': {
-			label: 'Page Up',
-			options: []
-		},
-		'pagedown': {
-			label: 'Page Down',
-			options: []
-		},
-		'DBO': {
-			label: 'DBO',
-			options: []
-		},
-		'edit': {
-			label: 'Edit',
-			options: []
-		},
-		'update': {
-			label: 'Update',
-			options: []
-		},
-		'delete': {
-			label: 'Delete',
-			options: []
-		},
-		'copy': {
-			label: 'Copy',
-			options: []
-		},
-		'move': {
-			label: 'Move',
-			options: []
-		},
-		'set': {
-			label: 'Set',
-			options: []
-		},
-		'fan': {
-			label: 'Fan',
-			options: []
-		},
-		'find': {
-			label: 'Find',
-			options: []
-		},
-		'clear': {
-			label: 'Clear',
-			options: []
-		},
-		'rec': {
-			label: 'Rec',
-			options: []
-		},
-	    'playbackSelection': {
-			label: 'Playback Selection',
-			options: [
-				{
-					type: 'number',
-					label: 'Playback Number',
-					id: 'playbackNumber',
-					min: 1,
-					max: 30,
-					default: 1,
-					required: true,
-					range: true
-			   	},
-			]
-		},
-		'playbackGo': {
-			label: 'Playback Go',
-			options: [
-				{
-					type: 'number',
-					label: 'Playback Number',
-					id: 'playbackNumber',
-					min: 1,
-					max: 30,
-					default: 1,
-					required: true,
-					range: true
-			   	},
-			]
-		},
-		'playbackFlash': {
-			label: 'Playback Flash',
-			options: [
-				{
-					type: 'number',
-					label: 'Playback Number',
-					id: 'playbackNumber',
-					min: 1,
-					max: 30,
-					default: 1,
-					required: true,
-					range: true
-			   	},
-			]
-		},
-		'playbackStop': {
-			label: 'Playback Stop',
-			options: [
-				{
-					type: 'number',
-					label: 'Playback Number',
-					id: 'playbackNumber',
-					min: 1,
-					max: 30,
-					default: 1,
-					required: true,
-					range: true
-			   	},
-			]
-		},'playbackPrev': {
-			label: 'Playback Prev',
-			options: [
-				{
-					type: 'number',
-					label: 'Playback Number',
-					id: 'playbackNumber',
-					min: 1,
-					max: 30,
-					default: 1,
-					required: true,
-					range: true
-			   	},
-			]
-		},
-		'playbackNext': {
-			label: 'Playback Next',
-			options: [
-				{
-					type: 'number',
-					label: 'Playback Number',
-					id: 'playbackNumber',
-					min: 1,
-					max: 30,
-					default: 1,
-					required: true,
-					range: true
-			   	},
-			]
-		},'playbackPause': {
-			label: 'Playback Pause',
-			options: [
-				{
-					type: 'number',
-					label: 'Playback Number',
-					id: 'playbackNumber',
-					min: 1,
-					max: 30,
-					default: 1,
-					required: true,
-					range: true
-			   	},
-			]
-		},
-		'playbackFaderLevel': {
-			label: 'Playback Fader Level',
-			options: [
-				{
-					type: 'number',
-					label: 'Playback Number',
-					id: 'playbackNumber',
-					min: 1,
-					max: 30,
-					default: 1,
-					required: true,
-					range: true
-			   	},
-				{
-					type: 'number',
-					label: 'Fader Level',
-					id: 'float',
-					min: 0,
-					max: 255,
-					default: 255,
-					required: true,
-					range: true
-			   }
-			]
-		},
-		'mainPlaybackGo': {
-			label: 'Main Playback Go',
-			options: []
-		},
-		'mainPlaybackStop': {
-			label: 'Main Playback Stop',
-			options: []
-		},
-		'mainPlaybackPrev': {
-			label: 'Main Playback Prev',
-			options: []
-		},
-		'mainPlaybackNext': {
-			label: 'Main Playback Next',
-			options: []
-		},
-		'mainPlaybackPause': {
-			label: 'Main Playback Pause',
-			options: []
-		},
-		'setGMLevel': {
-			label: 'Set GM Level',
-			options: [
-				{
-					type: 'number',
-					label: 'GM Level',
-					id: 'float',
-					min: 0,
-					max: 255,
-					default: 255,
-					required: true,
-					range: true
-			   }
-			]
-		},
-		'encoders': {
-			label: 'Encoders',
-			options: [
-				{
-					type: 'number',
-					label: 'Select Executor',
-					id: 'encoderNumber',
-					min: 1,
-					max: 4,
-					default: 1,
-					required: true,
-					range: true
-			   	},
-			   	{
-					type: 'number',
-					label: 'Encoder Position',
-					id: 'float',
-					min: -1,
-					max: 1,
-					default: 0,
-					required: true,
-					range: true
-		   		}	
-			]
-		},
-		'selectFixture': {
-			label: 'Select Fixture',
-			options: []
-		},
-		'selectGroup': {
-			label: 'Select Group',
-			options: []
-		},
-		'selectionNext': {
-			label: 'Selection Next',
-			options: []
-		},
-		'selectionPrev': {
-			label: 'Selection Prev',
-			options: []
-		},
-		'intensity': {
-			label: 'Intensity',
-			options: []
-		},
-		'position': {
-			label: 'Position',
-			options: []
-		},
-		'color': {
-			label: 'Color',
-			options: []
-		},
-		'color': {
-			label: 'Color',
-			options: []
-		},
-		'beam': {
-			label: 'Beam',
-			options: []
-		},
-		'advanced': {
-			label: 'Advanced',
-			options: []
-		},
-		'gobo': {
-			label: 'Gobo',
-			options: []
-		},
-		'fx': {
-			label: 'Fx',
-			options: []
-		},
-		'executorPushMode': {
-			label: 'Executor Push Mode',
-			options: [
-				{
-					type: 'number',
-					label: 'Executor Page',
-					id: 'executorPage',
-					min: 1,
-					max: 2,
-					default: 1,
-					required: true,
-					range: true
-			   	},
-				{
-					type: 'number',
-					label: 'Select X Position',
-					id: 'xpos',
-					min: 1,
-					max: 8,
-					default: 1,
-					required: true,
-					range: true
-			   	},
-				{
-					type: 'number',
-					label: 'Select Y Position',
-					id: 'ypos',
-					min: 1,
-					max: 6,
-					default: 1,
-					required: true,
-					range: true
-			   }
-			]
-		},
-		'executorToggleMode': {
-			label: 'Executor Toggle Mode',
-			options: [
-				{
-					type: 'number',
-					label: 'Executor Page',
-					id: 'executorPage',
-					min: 1,
-					max: 2,
-					default: 1,
-					required: true,
-					range: true
-			   	},
-				{
-					type: 'number',
-					label: 'Select X Position',
-					id: 'xpos',
-					min: 1,
-					max: 8,
-					default: 1,
-					required: true,
-					range: true
-			   	},
-				{
-					type: 'number',
-					label: 'Select Y Position',
-					id: 'ypos',
-					min: 1,
-					max: 6,
-					default: 1,
-					required: true,
-					range: true
-			   }
-			]
-		},
-		'triggerExecutorRow': {
-			label: 'Trigger Executor Row',
-			options: [
-				{
-					type: 'number',
-					label: 'Select Executor Row',
-					id: 'float',
-					min: 1,
-					max: 6,
-					default: 1,
-					required: true,
-					range: true
-			   }
-			]
-		},
-		'syncAll': {
-			label: 'Sync All',
-			options: []
-		},
-		'syncOnlyParameters': {
-			label: 'Sync Only Parameters',
-			options: []
-		},
-		'syncOnlyExecutors': {
-			label: 'Sync Only Executors',
-			options: []
-		}
-	});
-}
-
-instance.prototype.action = function(action) {
-	var self = this;
-
-	var args = null;
-
-	debug('action: ', action);
-
-	switch(action.action) {
-		case 'pageup':
-			oscPath = '/LS/Page/Up';
-			args = [];
-			break;
-		case 'pagedown':
-			oscPath = '/LS/Page/Down';
-			args = [];
-			break;
-		case 'DBO':
-			oscPath = '/LS/DBO';
-			args = [];
-			break;
-		case 'edit':
-			oscPath = '/LS/edit';
-			args = [];
-			break;
-		case 'update':
-			oscPath = '/LS/Update';
-			args = [];
-			break;
-		case 'delete':
-			oscPath = '/LS/Delete';
-			args = [];
-			break;
-		case 'copy':
-			oscPath = '/LS/Copy';
-			args = [];
-			break;
-		case 'move':
-			oscPath = '/LS/Move';
-			args = [];
-			break;
-		case 'set':
-			oscPath = '/LS/Set';
-			args = [];
-			break;
-		case 'fan':
-			oscPath = '/LS/Fan';
-			args = [];
-			break;
-		case 'find':
-			oscPath = '/LS/Find';
-			args = [];
-			break;
-		case 'clear':
-			oscPath = '/LS/Clear';
-			args = [];
-			break;
-		case 'rec':
-			oscPath = '/LS/Rec';
-			args = [];
-			break;
-		case 'playbackSelection':
-			oscPath = '/LS/Select/PB/' + action.options.playbackNumber;
-			args = [{
-				type: 'f',
-				value: 1
-			}];
-			break;
-		case 'playbackGO':
-			oscPath = '/LS/Select/PB/' + action.options.playbackNumber;
-			args = [{
-				type: 'f',
-				value: 1
-			}];
-			break;
-		case 'playbackFlash':
-			oscPath = '/LS/Select/PB/' + action.options.playbackNumber;
-			args = [{
-				type: 'f',
-				value: 1
-			}];
-			break;
-		case 'playbackStop':
-			oscPath = '/LS/Select/PB/' + action.options.playbackNumber;
-			args = [{
-				type: 'f',
-				value: 1
-			}];
-			break;
-		case 'playbackPrev':
-			oscPath = '/LS/Select/PB/' + action.options.playbackNumber;
-			args = [{
-				type: 'f',
-				value: 1
-			}];
-			break;
-		case 'playbackNext':
-			oscPath = '/LS/Select/PB/' + action.options.playbackNumber;
-			args = [{
-				type: 'f',
-				value: 1
-			}];
-			break;
-		case 'playbackPause':
-			oscPath = '/LS/Select/PB/' + action.options.playbackNumber;
-			args = [{
-				type: 'f',
-				value: 1
-			}];
-			break;
-		case 'playbackFaderLevel':
-			oscPath = '/LS/Level/PB/' + action.options.playbackNumber;
-			args = [{
-				type: 'f',
-				value: parseFloat(action.options.float)
-			}];
-			break;
-		case 'mainPlaybackGo':
-			oscPath = '/LS/Go/Main';
-			args = [];
-			break;
-		case 'mainPlaybackStop':
-			oscPath = '/LS/Stop/Main';
-			args = [];
-			break;
-		case 'mainPlaybackPrev':
-			oscPath = '/LS/Prev/Main';
-			args = [];
-			break;
-		case 'mainPlaybackNext':
-			oscPath = '/LS/Next/Main';
-			args = [];
-			break;
-		case 'mainPlaybackPause':
-			oscPath = '/LS/Pause/Main';
-			args = [];
-			break;
-		case 'setGMLevel':
-			oscPath = '/LS/Level/GM';
-			args = [{
-				type: 'f',
-				value: parseFloat(action.options.float)
-			}];
-			break;
-		case 'encoders':
-			oscPath = '/LS/Encoder/' + action.options.encoderNumber;
-			console.log(oscPath);
-			args = [{
-				type: 'f',
-				value: parseFloat(action.options.float)
-			}];
-			break;
-		case 'selectFixture':
-			oscPath = '/LS/SelectFixture';
-			args = [];
-			break;
-		case 'selectGroup':
-			oscPath = '/LS/SelectGroup';
-			args = [];
-			break;
-		case 'selectionNext':
-			oscPath = '/LS/SelectionNext';
-			args = [];
-			break;
-		case 'selectionPrev':
-			oscPath = '/LS/SelectionPrevious';
-			args = [];
-			break;
-		case 'intensity':
-			oscPath = '/LS/Intensity';
-			args = [];
-			break;
-		case 'position':
-			oscPath = '/LS/Position';
-			args = [];
-			break;
-		case 'color':
-			oscPath = '/LS/Color';
-			args = [];
-			break;
-		case 'beam':
-			oscPath = '/LS/Beam';
-			args = [];
-			break;
-		case 'advanced':
-			oscPath = '/LS/Advance';
-			args = [];
-			break;
-		case 'gobo':
-			oscPath = '/LS/Gobo';
-			args = [];
-			break;
-		case 'Fx':
-			oscPath = '/LS/Gobo';
-			args = [];
-			break;
-		case 'executorPushMode':
-			executorPage = action.options.executorPage;
-			xpos = action.options.xpos;
-			ypos = action.options.ypos;
-			oscPath = '/LS/Executor/' + executorPage + '/' + xpos + '/' + ypos;
-			args = [{
-				type: 'f',
-				value: 1
-			}];
-			break;
-		case 'executorToggleMode':
-			executorPage = action.options.executorPage;
-			xpos = action.options.xpos;
-			ypos = action.options.ypos;
-			oscPath = '/LS/Executor/' + executorPage + '/' + xpos + '/' + ypos;
-			args = [{
-				type: 'f',
-				value: 0
-			}];
-			break;
-		case 'triggerExecutorRow':
-			oscPath = '/LS/ExecutorLine/'
-			args = [{
-				type: 'f',
-				value: parseFloat(action.options.float)
-			}];
-			break;
-		case 'syncAll':
-			oscPath = '/LS/Sync';
-			args = [];
-			break;
-		case 'syncOnlyParameters':
-			oscPath = '/LS/Sync/Playbacks';
-			args = [];
-			break;
-		case 'syncOnltExecutors':
-			oscPath = '/LS/Sync/Executors';
-			args = [];
-			break;
-		case 'releaseAll':
-			oscPath = '/LS/StopAll';
-			args = [];
-			break;
-		default:
-			break;
+		this.setupOsc()
 	}
 
-	if (args !== null) {
-		debug('Sending OSC',self.config.host, self.config.port, oscPath);
-		console.log('sending osc');
-		console.log(args);
-		self.system.emit('osc_send', self.config.host, self.config.port, oscPath, args);
+	setupOsc() {
+		this.destroy()
+
+		if (this.client != null) {
+			this.client.close()
+		}
+		if (this.server != null) {
+			this.server.close()
+		}
+		if (this.config.targetIp == '' || !this.config.receivePort || !this.config.sendPort) {
+			this.updateStatus(InstanceStatus.BadConfig)
+			return
+		}
+		this.updateStatus(InstanceStatus.Connecting)
+		this.initVariables()
+
+		this.client = new Client(this.config.targetIp, this.config.sendPort)
+
+		this.server = new Server(this.config.receivePort, '0.0.0.0', () => {
+			this.send('/LS/Sync')
+			this.updateStatus(InstanceStatus.Ok)
+			this.startSendingSyncCommand()
+		})
+
+		this.server.on('message', (msg) => {
+			this.parseOscInput(msg)
+		})
+
+		this.server.on('bundle', (bundle) => {
+			bundle.elements.forEach((element, i) => {
+				this.parseOscInput(element)
+			})
+		})
+
+		if (this.server == null || this.client == null) {
+			this.updateStatus(InstanceStatus.ConnectionFailure)
+		}
 	}
 
+	parseOscInput(msg) {
+		const args = msg[0].split('/')
+		args.shift()
+		if (args[0] == 'LS') {
+			if (args[1] == 'Level') {
+				if (args[2] == 'GM') {
+					this.grandmaster = msg[1]
+					this.setVariableValues({
+						grandmaster_decimal: this.grandmaster,
+						grandmaster_percent: Math.floor((this.grandmaster / 255) * 100),
+					})
+				} else if (args[2] == 'SmSize') {
+					this.smSize = msg[1]
+					this.setVariableValues({
+						smSize: this.smSize,
+					})
+				} else if (args[2] == 'SmSpeed') {
+					this.smSpeed = msg[1]
+					this.setVariableValues({
+						smSpeed: this.smSpeed,
+					})
+				} else if (args[2] == 'SmChase') {
+					this.smChase = msg[1]
+					this.setVariableValues({
+						smChase: this.smChase,
+					})
+				} else if (args[2] == 'PB') {
+					this.playbackFaders[parseInt(args[3] - 1)] = msg[1]
+				}
+			}
+			if (args[0] == 'PB') {
+				if (msg[0] == '/PB') {
+					this.playbackFaders[msg[3].split('/')[1]] = msg[4]
+				} else if (msg[2] == '/SmSize') {
+					this.smSize = msg[3]
+					this.setVariableValues({
+						smSize: this.smSize,
+					})
+				} else if (msg[2] == '/SmSpeed') {
+					this.smSpeed = msg[3]
+					this.setVariableValues({
+						smSpeed: this.smSpeed,
+					})
+				} else if (msg[2] == '/SmChase') {
+					this.smChase = msg[3]
+					this.setVariableValues({
+						smChase: this.smChase,
+					})
+				} else if (msg[2] == '/GM') {
+					this.grandmaster = msg[3]
+					this.setVariableValues({
+						grandmaster_decimal: this.grandmaster,
+						grandmaster_percent: Math.floor((this.grandmaster / 255) * 100),
+					})
+				}
+			} else if (args[1] == 'Executor') {
+				var execPage = parseInt(args[2])
+				var execX = parseInt(args[3])
+				var execY = parseInt(args[4])
+				var execVal = parseInt(msg[1])
+				this.executors[execPage - 1][execX - 1][execY - 1] = execVal
+			}
+		}
+		this.checkFeedbacks()
+	}
 
-};
+	initVariables() {
+		this.grandmaster = 0
+		this.smSize = 0
+		this.smSpeed = 0
+		this.smChase = 0
+		this.playbackFaders = new Array(30)
+		this.executors = new Array(2)
 
-instance_skel.extendedBy(instance);
-exports = module.exports = instance;
+		for (let i = 0; i < 30; i++) {
+			this.playbackFaders[i] = 0
+		}
+
+		for (let i = 0; i < 2; i++) {
+			this.executors[i] = new Array(6)
+
+			for (let j = 0; j < 8; j++) {
+				this.executors[i][j] = new Array(6)
+				for (let k = 0; k < 6; k++) {
+					this.executors[i][j][k] = 0
+				}
+			}
+		}
+
+		this.setVariableValues({
+			grandmaster_percent: this.grandmaster,
+			grandmaster_decimal: this.grandmaster,
+			smSize: this.smSize,
+			smSpeed: this.smSpeed,
+			smChase: this.smChase,
+		})
+	}
+
+	sendButtonPress(path) {
+		this.client.send(path, 1)
+		this.client.send(path, 0)
+	}
+
+	sendValue(path, value) {
+		this.client.send(path, value)
+	}
+
+	send(path) {
+		this.client.send(path)
+	}
+
+	startSendingSyncCommand() {
+		if (this.config.enablePolling) {
+			this.syncCommandInterval = setInterval(() => {
+				this.send('/LS/Sync')
+			}, this.config.pollingInterval)
+		}
+	}
+
+	async destroy() {
+		this.isInitialized = false
+		if (this.syncCommandInterval) {
+			clearInterval(this.syncCommandInterval)
+		}
+	}
+
+	async configUpdated(config) {
+		this.config = config
+		this.setupOsc()
+	}
+
+	getConfigFields() {
+		return configFields
+	}
+
+	initFeedbacks() {
+		setupFeedbacks(this)
+	}
+
+	initActions() {
+		setupActions(this)
+	}
+}
+
+runEntrypoint(LightsharkInstance, upgradeScripts)
