@@ -1,3 +1,3 @@
-# companion-module-lightshark-osc
+# companion-module-equipson-lightshark
 
 See HELP.md and LICENSE
