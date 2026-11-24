@@ -3,7 +3,7 @@
 	"name": "equipson-lightshark",
 	"shortname": "equipson-lightshark",
 	"description": "Module for controlling the LightShark LS1 (or LS-Core) using OSC commands",
-	"version": "2.0.0",
+	"version": "2.0.1",
 	"license": "MIT",
 	"repository": "git+https://github.com/bitfocus/companion-module-equipson-lightshark.git",
 	"bugs": "https://github.com/bitfocus/companion-module-equipson-lightshark/issues",
